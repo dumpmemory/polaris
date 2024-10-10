@@ -3,7 +3,10 @@ package core
 import (
 	"polaris/db"
 	"polaris/ent"
+	"polaris/ent/downloadclients"
 	"polaris/log"
+	"polaris/pkg"
+	"polaris/pkg/qbittorrent"
 	"polaris/pkg/tmdb"
 	"polaris/pkg/transmission"
 	"polaris/pkg/utils"
@@ -23,20 +26,20 @@ func NewClient(db *db.Client, language string) *Client {
 
 type scheduler struct {
 	cron string
-	f func() error 
+	f    func() error
 }
 type Client struct {
-	db       *db.Client
-	cron     *cron.Cron
-	tasks    map[int]*Task
-	language string
+	db         *db.Client
+	cron       *cron.Cron
+	tasks      map[int]*Task
+	language   string
 	schedulers utils.Map[string, scheduler]
 }
 
 func (c *Client) registerCronJob(name string, cron string, f func() error) {
 	c.schedulers.Store(name, scheduler{
 		cron: cron,
-		f: f,
+		f:    f,
 	})
 }
 
@@ -48,30 +51,67 @@ func (c *Client) Init() {
 func (c *Client) reloadTasks() {
 	allTasks := c.db.GetRunningHistories()
 	for _, t := range allTasks {
-		torrent, err := transmission.ReloadTorrent(t.Saved)
+		dl, err := c.db.GetDownloadClient(t.DownloadClientID)
 		if err != nil {
-			log.Errorf("relaod task %s failed: %v", t.SourceTitle, err)
+			log.Warnf("no download client related: %v", t.SourceTitle)
 			continue
 		}
-		if !torrent.Exists() { //只要种子还存在于客户端中，就重新加载，有可能是还在做种中
-			continue
+
+		if dl.Implementation == downloadclients.ImplementationTransmission {
+			to, err := transmission.NewTorrent(transmission.Config{
+				URL:      dl.URL,
+				User:     dl.User,
+				Password: dl.Password,
+			}, t.Link)
+			if err != nil {
+				log.Warnf("get task error: %v", err)
+				continue
+			}
+			c.tasks[t.ID] = &Task{Torrent: to}
+		} else if dl.Implementation == downloadclients.ImplementationQbittorrent {
+			to, err := qbittorrent.NewTorrent(qbittorrent.Info{
+				URL:      dl.URL,
+				User:     dl.User,
+				Password: dl.Password,
+			}, t.Link)
+			if err != nil {
+				log.Warnf("get task error: %v", err)
+				continue
+			}
+			c.tasks[t.ID] = &Task{Torrent: to}
 		}
-		log.Infof("reloading task: %d %s", t.ID, t.SourceTitle)
-		c.tasks[t.ID] = &Task{Torrent: torrent}
+
 	}
 }
 
-func (c *Client) getDownloadClient() (*transmission.Client, *ent.DownloadClients, error) {
-	tr := c.db.GetTransmission()
-	trc, err := transmission.NewClient(transmission.Config{
-		URL:      tr.URL,
-		User:     tr.User,
-		Password: tr.Password,
-	})
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "connect transmission")
+func (c *Client) GetDownloadClient() (pkg.Downloader, *ent.DownloadClients, error) {
+	downloaders := c.db.GetAllDonloadClients()
+	for _, d := range downloaders {
+		if !d.Enable {
+			continue
+		}
+		if d.Implementation == downloadclients.ImplementationTransmission {
+			trc, err := transmission.NewClient(transmission.Config{
+				URL:      d.URL,
+				User:     d.User,
+				Password: d.Password,
+			})
+			if err != nil {
+				log.Warnf("connect to download client error: %v", d.URL)
+				continue
+			}
+			return trc, d, nil
+
+		} else if d.Implementation == downloadclients.ImplementationQbittorrent {
+			qbt, err := qbittorrent.NewClient(d.URL, d.User, d.Password)
+			if err != nil {
+				log.Warnf("connect to download client error: %v", d.URL)
+				continue
+			}
+			return qbt, d, nil
+		}
 	}
-	return trc, tr, nil
+	return nil, nil, errors.Errorf("no available download client")
 }
 
 func (c *Client) TMDB() (*tmdb.Client, error) {

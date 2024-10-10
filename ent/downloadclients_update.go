@@ -56,15 +56,15 @@ func (dcu *DownloadClientsUpdate) SetNillableName(s *string) *DownloadClientsUpd
 }
 
 // SetImplementation sets the "implementation" field.
-func (dcu *DownloadClientsUpdate) SetImplementation(s string) *DownloadClientsUpdate {
-	dcu.mutation.SetImplementation(s)
+func (dcu *DownloadClientsUpdate) SetImplementation(d downloadclients.Implementation) *DownloadClientsUpdate {
+	dcu.mutation.SetImplementation(d)
 	return dcu
 }
 
 // SetNillableImplementation sets the "implementation" field if the given value is not nil.
-func (dcu *DownloadClientsUpdate) SetNillableImplementation(s *string) *DownloadClientsUpdate {
-	if s != nil {
-		dcu.SetImplementation(*s)
+func (dcu *DownloadClientsUpdate) SetNillableImplementation(d *downloadclients.Implementation) *DownloadClientsUpdate {
+	if d != nil {
+		dcu.SetImplementation(*d)
 	}
 	return dcu
 }
@@ -125,17 +125,24 @@ func (dcu *DownloadClientsUpdate) SetNillableSettings(s *string) *DownloadClient
 	return dcu
 }
 
-// SetPriority sets the "priority" field.
-func (dcu *DownloadClientsUpdate) SetPriority(s string) *DownloadClientsUpdate {
-	dcu.mutation.SetPriority(s)
+// SetPriority1 sets the "priority1" field.
+func (dcu *DownloadClientsUpdate) SetPriority1(i int) *DownloadClientsUpdate {
+	dcu.mutation.ResetPriority1()
+	dcu.mutation.SetPriority1(i)
 	return dcu
 }
 
-// SetNillablePriority sets the "priority" field if the given value is not nil.
-func (dcu *DownloadClientsUpdate) SetNillablePriority(s *string) *DownloadClientsUpdate {
-	if s != nil {
-		dcu.SetPriority(*s)
+// SetNillablePriority1 sets the "priority1" field if the given value is not nil.
+func (dcu *DownloadClientsUpdate) SetNillablePriority1(i *int) *DownloadClientsUpdate {
+	if i != nil {
+		dcu.SetPriority1(*i)
 	}
+	return dcu
+}
+
+// AddPriority1 adds i to the "priority1" field.
+func (dcu *DownloadClientsUpdate) AddPriority1(i int) *DownloadClientsUpdate {
+	dcu.mutation.AddPriority1(i)
 	return dcu
 }
 
@@ -213,7 +220,25 @@ func (dcu *DownloadClientsUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (dcu *DownloadClientsUpdate) check() error {
+	if v, ok := dcu.mutation.Implementation(); ok {
+		if err := downloadclients.ImplementationValidator(v); err != nil {
+			return &ValidationError{Name: "implementation", err: fmt.Errorf(`ent: validator failed for field "DownloadClients.implementation": %w`, err)}
+		}
+	}
+	if v, ok := dcu.mutation.Priority1(); ok {
+		if err := downloadclients.Priority1Validator(v); err != nil {
+			return &ValidationError{Name: "priority1", err: fmt.Errorf(`ent: validator failed for field "DownloadClients.priority1": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (dcu *DownloadClientsUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := dcu.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(downloadclients.Table, downloadclients.Columns, sqlgraph.NewFieldSpec(downloadclients.FieldID, field.TypeInt))
 	if ps := dcu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -229,7 +254,7 @@ func (dcu *DownloadClientsUpdate) sqlSave(ctx context.Context) (n int, err error
 		_spec.SetField(downloadclients.FieldName, field.TypeString, value)
 	}
 	if value, ok := dcu.mutation.Implementation(); ok {
-		_spec.SetField(downloadclients.FieldImplementation, field.TypeString, value)
+		_spec.SetField(downloadclients.FieldImplementation, field.TypeEnum, value)
 	}
 	if value, ok := dcu.mutation.URL(); ok {
 		_spec.SetField(downloadclients.FieldURL, field.TypeString, value)
@@ -243,8 +268,11 @@ func (dcu *DownloadClientsUpdate) sqlSave(ctx context.Context) (n int, err error
 	if value, ok := dcu.mutation.Settings(); ok {
 		_spec.SetField(downloadclients.FieldSettings, field.TypeString, value)
 	}
-	if value, ok := dcu.mutation.Priority(); ok {
-		_spec.SetField(downloadclients.FieldPriority, field.TypeString, value)
+	if value, ok := dcu.mutation.Priority1(); ok {
+		_spec.SetField(downloadclients.FieldPriority1, field.TypeInt, value)
+	}
+	if value, ok := dcu.mutation.AddedPriority1(); ok {
+		_spec.AddField(downloadclients.FieldPriority1, field.TypeInt, value)
 	}
 	if value, ok := dcu.mutation.RemoveCompletedDownloads(); ok {
 		_spec.SetField(downloadclients.FieldRemoveCompletedDownloads, field.TypeBool, value)
@@ -304,15 +332,15 @@ func (dcuo *DownloadClientsUpdateOne) SetNillableName(s *string) *DownloadClient
 }
 
 // SetImplementation sets the "implementation" field.
-func (dcuo *DownloadClientsUpdateOne) SetImplementation(s string) *DownloadClientsUpdateOne {
-	dcuo.mutation.SetImplementation(s)
+func (dcuo *DownloadClientsUpdateOne) SetImplementation(d downloadclients.Implementation) *DownloadClientsUpdateOne {
+	dcuo.mutation.SetImplementation(d)
 	return dcuo
 }
 
 // SetNillableImplementation sets the "implementation" field if the given value is not nil.
-func (dcuo *DownloadClientsUpdateOne) SetNillableImplementation(s *string) *DownloadClientsUpdateOne {
-	if s != nil {
-		dcuo.SetImplementation(*s)
+func (dcuo *DownloadClientsUpdateOne) SetNillableImplementation(d *downloadclients.Implementation) *DownloadClientsUpdateOne {
+	if d != nil {
+		dcuo.SetImplementation(*d)
 	}
 	return dcuo
 }
@@ -373,17 +401,24 @@ func (dcuo *DownloadClientsUpdateOne) SetNillableSettings(s *string) *DownloadCl
 	return dcuo
 }
 
-// SetPriority sets the "priority" field.
-func (dcuo *DownloadClientsUpdateOne) SetPriority(s string) *DownloadClientsUpdateOne {
-	dcuo.mutation.SetPriority(s)
+// SetPriority1 sets the "priority1" field.
+func (dcuo *DownloadClientsUpdateOne) SetPriority1(i int) *DownloadClientsUpdateOne {
+	dcuo.mutation.ResetPriority1()
+	dcuo.mutation.SetPriority1(i)
 	return dcuo
 }
 
-// SetNillablePriority sets the "priority" field if the given value is not nil.
-func (dcuo *DownloadClientsUpdateOne) SetNillablePriority(s *string) *DownloadClientsUpdateOne {
-	if s != nil {
-		dcuo.SetPriority(*s)
+// SetNillablePriority1 sets the "priority1" field if the given value is not nil.
+func (dcuo *DownloadClientsUpdateOne) SetNillablePriority1(i *int) *DownloadClientsUpdateOne {
+	if i != nil {
+		dcuo.SetPriority1(*i)
 	}
+	return dcuo
+}
+
+// AddPriority1 adds i to the "priority1" field.
+func (dcuo *DownloadClientsUpdateOne) AddPriority1(i int) *DownloadClientsUpdateOne {
+	dcuo.mutation.AddPriority1(i)
 	return dcuo
 }
 
@@ -474,7 +509,25 @@ func (dcuo *DownloadClientsUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (dcuo *DownloadClientsUpdateOne) check() error {
+	if v, ok := dcuo.mutation.Implementation(); ok {
+		if err := downloadclients.ImplementationValidator(v); err != nil {
+			return &ValidationError{Name: "implementation", err: fmt.Errorf(`ent: validator failed for field "DownloadClients.implementation": %w`, err)}
+		}
+	}
+	if v, ok := dcuo.mutation.Priority1(); ok {
+		if err := downloadclients.Priority1Validator(v); err != nil {
+			return &ValidationError{Name: "priority1", err: fmt.Errorf(`ent: validator failed for field "DownloadClients.priority1": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (dcuo *DownloadClientsUpdateOne) sqlSave(ctx context.Context) (_node *DownloadClients, err error) {
+	if err := dcuo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(downloadclients.Table, downloadclients.Columns, sqlgraph.NewFieldSpec(downloadclients.FieldID, field.TypeInt))
 	id, ok := dcuo.mutation.ID()
 	if !ok {
@@ -507,7 +560,7 @@ func (dcuo *DownloadClientsUpdateOne) sqlSave(ctx context.Context) (_node *Downl
 		_spec.SetField(downloadclients.FieldName, field.TypeString, value)
 	}
 	if value, ok := dcuo.mutation.Implementation(); ok {
-		_spec.SetField(downloadclients.FieldImplementation, field.TypeString, value)
+		_spec.SetField(downloadclients.FieldImplementation, field.TypeEnum, value)
 	}
 	if value, ok := dcuo.mutation.URL(); ok {
 		_spec.SetField(downloadclients.FieldURL, field.TypeString, value)
@@ -521,8 +574,11 @@ func (dcuo *DownloadClientsUpdateOne) sqlSave(ctx context.Context) (_node *Downl
 	if value, ok := dcuo.mutation.Settings(); ok {
 		_spec.SetField(downloadclients.FieldSettings, field.TypeString, value)
 	}
-	if value, ok := dcuo.mutation.Priority(); ok {
-		_spec.SetField(downloadclients.FieldPriority, field.TypeString, value)
+	if value, ok := dcuo.mutation.Priority1(); ok {
+		_spec.SetField(downloadclients.FieldPriority1, field.TypeInt, value)
+	}
+	if value, ok := dcuo.mutation.AddedPriority1(); ok {
+		_spec.AddField(downloadclients.FieldPriority1, field.TypeInt, value)
 	}
 	if value, ok := dcuo.mutation.RemoveCompletedDownloads(); ok {
 		_spec.SetField(downloadclients.FieldRemoveCompletedDownloads, field.TypeBool, value)

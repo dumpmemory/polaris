@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"polaris/ent/blacklist"
 	"polaris/ent/downloadclients"
 	"polaris/ent/episode"
 	"polaris/ent/history"
@@ -18,6 +19,12 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	blacklistFields := schema.Blacklist{}.Fields()
+	_ = blacklistFields
+	// blacklistDescValue is the schema descriptor for value field.
+	blacklistDescValue := blacklistFields[1].Descriptor()
+	// blacklist.DefaultValue holds the default value on creation for the value field.
+	blacklist.DefaultValue = blacklistDescValue.Default.(schema.BlacklistValue)
 	downloadclientsFields := schema.DownloadClients{}.Fields()
 	_ = downloadclientsFields
 	// downloadclientsDescUser is the schema descriptor for user field.
@@ -32,10 +39,12 @@ func init() {
 	downloadclientsDescSettings := downloadclientsFields[6].Descriptor()
 	// downloadclients.DefaultSettings holds the default value on creation for the settings field.
 	downloadclients.DefaultSettings = downloadclientsDescSettings.Default.(string)
-	// downloadclientsDescPriority is the schema descriptor for priority field.
-	downloadclientsDescPriority := downloadclientsFields[7].Descriptor()
-	// downloadclients.DefaultPriority holds the default value on creation for the priority field.
-	downloadclients.DefaultPriority = downloadclientsDescPriority.Default.(string)
+	// downloadclientsDescPriority1 is the schema descriptor for priority1 field.
+	downloadclientsDescPriority1 := downloadclientsFields[7].Descriptor()
+	// downloadclients.DefaultPriority1 holds the default value on creation for the priority1 field.
+	downloadclients.DefaultPriority1 = downloadclientsDescPriority1.Default.(int)
+	// downloadclients.Priority1Validator is a validator for the "priority1" field. It is called by the builders before save.
+	downloadclients.Priority1Validator = downloadclientsDescPriority1.Validators[0].(func(int) error)
 	// downloadclientsDescRemoveCompletedDownloads is the schema descriptor for remove_completed_downloads field.
 	downloadclientsDescRemoveCompletedDownloads := downloadclientsFields[8].Descriptor()
 	// downloadclients.DefaultRemoveCompletedDownloads holds the default value on creation for the remove_completed_downloads field.

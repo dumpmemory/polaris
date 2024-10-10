@@ -8,29 +8,30 @@ import (
 )
 
 var (
-	// BlocklistsColumns holds the columns for the "blocklists" table.
-	BlocklistsColumns = []*schema.Column{
+	// BlacklistsColumns holds the columns for the "blacklists" table.
+	BlacklistsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"media", "torrent"}},
-		{Name: "value", Type: field.TypeString},
+		{Name: "value", Type: field.TypeJSON},
+		{Name: "notes", Type: field.TypeString, Nullable: true},
 	}
-	// BlocklistsTable holds the schema information for the "blocklists" table.
-	BlocklistsTable = &schema.Table{
-		Name:       "blocklists",
-		Columns:    BlocklistsColumns,
-		PrimaryKey: []*schema.Column{BlocklistsColumns[0]},
+	// BlacklistsTable holds the schema information for the "blacklists" table.
+	BlacklistsTable = &schema.Table{
+		Name:       "blacklists",
+		Columns:    BlacklistsColumns,
+		PrimaryKey: []*schema.Column{BlacklistsColumns[0]},
 	}
 	// DownloadClientsColumns holds the columns for the "download_clients" table.
 	DownloadClientsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "enable", Type: field.TypeBool},
 		{Name: "name", Type: field.TypeString},
-		{Name: "implementation", Type: field.TypeString},
+		{Name: "implementation", Type: field.TypeEnum, Enums: []string{"transmission", "qbittorrent"}},
 		{Name: "url", Type: field.TypeString},
 		{Name: "user", Type: field.TypeString, Default: ""},
 		{Name: "password", Type: field.TypeString, Default: ""},
 		{Name: "settings", Type: field.TypeString, Default: ""},
-		{Name: "priority", Type: field.TypeString, Default: ""},
+		{Name: "priority1", Type: field.TypeInt, Default: 1},
 		{Name: "remove_completed_downloads", Type: field.TypeBool, Default: true},
 		{Name: "remove_failed_downloads", Type: field.TypeBool, Default: true},
 		{Name: "tags", Type: field.TypeString, Default: ""},
@@ -79,6 +80,7 @@ var (
 		{Name: "size", Type: field.TypeInt, Default: 0},
 		{Name: "download_client_id", Type: field.TypeInt, Nullable: true},
 		{Name: "indexer_id", Type: field.TypeInt, Nullable: true},
+		{Name: "link", Type: field.TypeString, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"running", "success", "fail", "uploading", "seeding"}},
 		{Name: "saved", Type: field.TypeString, Nullable: true},
 	}
@@ -133,7 +135,7 @@ var (
 		{Name: "overview", Type: field.TypeString},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "air_date", Type: field.TypeString, Default: ""},
-		{Name: "resolution", Type: field.TypeEnum, Enums: []string{"720p", "1080p", "2160p"}, Default: "1080p"},
+		{Name: "resolution", Type: field.TypeEnum, Enums: []string{"720p", "1080p", "2160p", "any"}, Default: "1080p"},
 		{Name: "storage_id", Type: field.TypeInt, Nullable: true},
 		{Name: "target_dir", Type: field.TypeString, Nullable: true},
 		{Name: "download_history_episodes", Type: field.TypeBool, Nullable: true, Default: false},
@@ -191,7 +193,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
-		BlocklistsTable,
+		BlacklistsTable,
 		DownloadClientsTable,
 		EpisodesTable,
 		HistoriesTable,

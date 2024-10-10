@@ -3,6 +3,8 @@
 package downloadclients
 
 import (
+	"fmt"
+
 	"entgo.io/ent/dialect/sql"
 )
 
@@ -25,8 +27,8 @@ const (
 	FieldPassword = "password"
 	// FieldSettings holds the string denoting the settings field in the database.
 	FieldSettings = "settings"
-	// FieldPriority holds the string denoting the priority field in the database.
-	FieldPriority = "priority"
+	// FieldPriority1 holds the string denoting the priority1 field in the database.
+	FieldPriority1 = "priority1"
 	// FieldRemoveCompletedDownloads holds the string denoting the remove_completed_downloads field in the database.
 	FieldRemoveCompletedDownloads = "remove_completed_downloads"
 	// FieldRemoveFailedDownloads holds the string denoting the remove_failed_downloads field in the database.
@@ -47,7 +49,7 @@ var Columns = []string{
 	FieldUser,
 	FieldPassword,
 	FieldSettings,
-	FieldPriority,
+	FieldPriority1,
 	FieldRemoveCompletedDownloads,
 	FieldRemoveFailedDownloads,
 	FieldTags,
@@ -70,8 +72,10 @@ var (
 	DefaultPassword string
 	// DefaultSettings holds the default value on creation for the "settings" field.
 	DefaultSettings string
-	// DefaultPriority holds the default value on creation for the "priority" field.
-	DefaultPriority string
+	// DefaultPriority1 holds the default value on creation for the "priority1" field.
+	DefaultPriority1 int
+	// Priority1Validator is a validator for the "priority1" field. It is called by the builders before save.
+	Priority1Validator func(int) error
 	// DefaultRemoveCompletedDownloads holds the default value on creation for the "remove_completed_downloads" field.
 	DefaultRemoveCompletedDownloads bool
 	// DefaultRemoveFailedDownloads holds the default value on creation for the "remove_failed_downloads" field.
@@ -79,6 +83,29 @@ var (
 	// DefaultTags holds the default value on creation for the "tags" field.
 	DefaultTags string
 )
+
+// Implementation defines the type for the "implementation" enum field.
+type Implementation string
+
+// Implementation values.
+const (
+	ImplementationTransmission Implementation = "transmission"
+	ImplementationQbittorrent  Implementation = "qbittorrent"
+)
+
+func (i Implementation) String() string {
+	return string(i)
+}
+
+// ImplementationValidator is a validator for the "implementation" field enum values. It is called by the builders before save.
+func ImplementationValidator(i Implementation) error {
+	switch i {
+	case ImplementationTransmission, ImplementationQbittorrent:
+		return nil
+	default:
+		return fmt.Errorf("downloadclients: invalid enum value for implementation field: %q", i)
+	}
+}
 
 // OrderOption defines the ordering options for the DownloadClients queries.
 type OrderOption func(*sql.Selector)
@@ -123,9 +150,9 @@ func BySettings(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSettings, opts...).ToFunc()
 }
 
-// ByPriority orders the results by the priority field.
-func ByPriority(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldPriority, opts...).ToFunc()
+// ByPriority1 orders the results by the priority1 field.
+func ByPriority1(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPriority1, opts...).ToFunc()
 }
 
 // ByRemoveCompletedDownloads orders the results by the remove_completed_downloads field.

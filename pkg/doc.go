@@ -6,12 +6,15 @@ type Torrent interface {
 	Stop() error
 	Start() error
 	Remove() error
-	Save() string
+	//Save() string
 	Exists() bool
 	SeedRatio() (float64, error)
+	GetHash() string
+	//Reload() error
 }
 
-
-type Storage interface {
-
+type Downloader interface {
+	GetAll() ([]Torrent, error)
+	Download(link, dir string) (Torrent, error)
 }
+

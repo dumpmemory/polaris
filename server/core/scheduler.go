@@ -341,7 +341,7 @@ func (c *Client) DownloadMovieByID(id int) (string, error) {
 }
 
 func (c *Client) downloadMovieSingleEpisode(ep *ent.Episode, targetDir string) (string, error) {
-	trc, dlc, err := c.getDownloadClient()
+	trc, dlc, err := c.GetDownloadClient()
 	if err != nil {
 		return "", errors.Wrap(err, "connect transmission")
 	}
@@ -363,7 +363,13 @@ func (c *Client) downloadMovieSingleEpisode(ep *ent.Episode, targetDir string) (
 	}
 	r1 := res[0]
 	log.Infof("begin download torrent resource: %v", r1.Name)
-	torrent, err := trc.Download(r1.Link, c.db.GetDownloadDir())
+
+	magnet, err := utils.Link2Magnet(r1.Link)
+	if err != nil {
+		return "", errors.Errorf("converting link to magnet error, link: %v, error: %v", r1.Link, err)
+	}
+
+	torrent, err := trc.Download(magnet, c.db.GetDownloadDir())
 	if err != nil {
 		return "", errors.Wrap(err, "downloading")
 	}
@@ -376,7 +382,8 @@ func (c *Client) downloadMovieSingleEpisode(ep *ent.Episode, targetDir string) (
 		TargetDir:        targetDir,
 		Status:           history.StatusRunning,
 		Size:             r1.Size,
-		Saved:            torrent.Save(),
+		//Saved:            torrent.Save(),
+		Link:             magnet,
 		DownloadClientID: dlc.ID,
 		IndexerID:        r1.IndexerId,
 	})
@@ -440,7 +447,7 @@ func (c *Client) checkSeiesNewSeason(media *ent.Media) error {
 	return nil
 }
 
-func (c *Client) isSeedRatioLimitReached(indexId int, t pkg.Torrent)(float64,bool)  {
+func (c *Client) isSeedRatioLimitReached(indexId int, t pkg.Torrent) (float64, bool) {
 	indexer, err := c.db.GetIndexer(indexId)
 	if err != nil {
 		return 0, true

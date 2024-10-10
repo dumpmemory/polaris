@@ -14,7 +14,7 @@ import (
 )
 
 func (c *Client) DownloadEpisodeTorrent(r1 torznab.Result, seriesId, seasonNum, episodeNum int) (*string, error) {
-	trc, dlc, err := c.getDownloadClient()
+	trc, dlc, err := c.GetDownloadClient()
 	if err != nil {
 		return nil, errors.Wrap(err, "connect transmission")
 	}
@@ -44,7 +44,12 @@ func (c *Client) DownloadEpisodeTorrent(r1 torznab.Result, seriesId, seasonNum, 
 	} else { //season package download
 		ep = &ent.Episode{}
 	}
-	torrent, err := trc.Download(r1.Link, downloadDir)
+	magnet, err := utils.Link2Magnet(r1.Link)
+	if err != nil {
+		return nil, errors.Errorf("converting link to magnet error, link: %v, error: %v", r1.Link, err)
+	}
+
+	torrent, err := trc.Download(magnet, downloadDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "downloading")
 	}
@@ -59,7 +64,8 @@ func (c *Client) DownloadEpisodeTorrent(r1 torznab.Result, seriesId, seasonNum, 
 		TargetDir:        dir,
 		Status:           history.StatusRunning,
 		Size:             r1.Size,
-		Saved:            torrent.Save(),
+		//Saved:            torrent.Save(),
+		Link:             magnet,
 		DownloadClientID: dlc.ID,
 		IndexerID:        r1.IndexerId,
 	})
@@ -102,12 +108,16 @@ func (c *Client) SearchAndDownload(seriesId, seasonNum, episodeNum int) (*string
 }
 
 func (c *Client) DownloadMovie(m *ent.Media, link, name string, size int, indexerID int) (*string, error) {
-	trc, dlc, err := c.getDownloadClient()
+	trc, dlc, err := c.GetDownloadClient()
 	if err != nil {
 		return nil, errors.Wrap(err, "connect transmission")
 	}
+	magnet, err := utils.Link2Magnet(link)
+	if err != nil {
+		return nil, errors.Errorf("converting link to magnet error, link: %v, error: %v", link, err)
+	}
 
-	torrent, err := trc.Download(link, c.db.GetDownloadDir())
+	torrent, err := trc.Download(magnet, c.db.GetDownloadDir())
 	if err != nil {
 		return nil, errors.Wrap(err, "downloading")
 	}
@@ -125,7 +135,8 @@ func (c *Client) DownloadMovie(m *ent.Media, link, name string, size int, indexe
 			TargetDir:        m.TargetDir,
 			Status:           history.StatusRunning,
 			Size:             size,
-			Saved:            torrent.Save(),
+			//Saved:            torrent.Save(),
+			Link:             magnet,
 			DownloadClientID: dlc.ID,
 			IndexerID:        indexerID,
 		})

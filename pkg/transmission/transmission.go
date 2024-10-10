@@ -2,12 +2,11 @@ package transmission
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"polaris/log"
-	"strings"
+	"polaris/pkg"
+	"polaris/pkg/utils"
 
 	"github.com/hekmon/transmissionrpc/v3"
 	"github.com/pkg/errors"
@@ -45,76 +44,82 @@ type Client struct {
 	cfg Config
 }
 
-func (c *Client) GetAll() ([]*Torrent, error) {
+func (c *Client) GetAll() ([]pkg.Torrent, error) {
 	all, err := c.c.TorrentGetAll(context.TODO())
 	if err != nil {
 		return nil, errors.Wrap(err, "get all")
 	}
-	var torrents []*Torrent
+	var torrents []pkg.Torrent
 	for _, t := range all {
 		torrents = append(torrents, &Torrent{
-			Hash:     *t.HashString,
-			c:      c.c,
-			Config: c.cfg,		
+			hash: *t.HashString,
+			c:    c.c,
+			//cfg: c.cfg,
 		})
 	}
 	return torrents, nil
 }
 
-func (c *Client) Download(link, dir string) (*Torrent, error) {
-	if strings.HasPrefix(link, "http") {
-		client := &http.Client{
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
-		}
-		resp, err:=client.Get(link)
-		if err == nil {
-			if resp.StatusCode == http.StatusFound {
-				loc, err := resp.Location()
-				if err == nil {
-					link = loc.String()
-					log.Warnf("transimision redirect to url: %v", link)
-				}
-			}
-	
-		}
-	
-	} 
-	t, err := c.c.TorrentAdd(context.TODO(), transmissionrpc.TorrentAddPayload{
-		Filename:    &link,
-		DownloadDir: &dir,
-	})
-	log.Infof("get torrent info: %+v", t)
-	if t.HashString == nil {
-		return nil, fmt.Errorf("download torrent error: %v", link)
+func (c *Client) Download(link, dir string) (pkg.Torrent, error) {
+	magnet, err := utils.Link2Magnet(link)
+	if err != nil {
+		return nil, errors.Errorf("converting link to magnet error, link: %v, error: %v", link, err)
 	}
 
+	hash, err := utils.MagnetHash(magnet)
+	if err != nil {
+		return nil, errors.Wrap(err, "get hash")
+	}
+
+	t, err := c.c.TorrentAdd(context.TODO(), transmissionrpc.TorrentAddPayload{
+		Filename:    &magnet,
+		DownloadDir: &dir,
+	})
+	log.Debugf("get torrent info: %+v", t)
+
 	return &Torrent{
-		Hash:     *t.HashString,
-		c:      c.c,
-		Config: c.cfg,
+		hash: hash,
+		c:    c.c,
+		//cfg: c.cfg,
 	}, err
+}
+
+func NewTorrent(cfg Config, link string) (*Torrent, error) {
+	c, err := NewClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	magnet, err := utils.Link2Magnet(link)
+	if err != nil {
+		return nil, errors.Errorf("converting link to magnet error, link: %v, error: %v", link, err)
+	}
+
+	hash, err := utils.MagnetHash(magnet)
+	if err != nil {
+		return nil, err
+	}
+
+	t := &Torrent{
+		c:    c.c,
+		hash: hash,
+		//cfg: cfg,
+	}
+	if !t.Exists() {
+		return nil, errors.Errorf("torrent not exist: %v", magnet)
+	}
+	return t, nil
 }
 
 type Torrent struct {
 	//t *transmissionrpc.Torrent
-	c  *transmissionrpc.Client
-	Hash string `json:"hash"`
-	Config
-}
-
-func (t *Torrent) reloadClient() error {
-	c, err := NewClient(t.Config)
-	if err != nil {
-		return err
-	}
-	t.c = c.c
-	return nil
+	c    *transmissionrpc.Client
+	hash string
+	//cfg Config
 }
 
 func (t *Torrent) getTorrent() (transmissionrpc.Torrent, error) {
-	r, err := t.c.TorrentGetAllForHashes(context.TODO(), []string{t.Hash})
+	r, err := t.c.TorrentGetAllForHashes(context.TODO(), []string{t.hash})
 	if err != nil {
 		log.Errorf("get torrent info for error: %v", err)
 	}
@@ -125,13 +130,12 @@ func (t *Torrent) getTorrent() (transmissionrpc.Torrent, error) {
 }
 
 func (t *Torrent) Exists() bool {
-	r, err := t.c.TorrentGetAllForHashes(context.TODO(), []string{t.Hash})
+	r, err := t.c.TorrentGetAllForHashes(context.TODO(), []string{t.hash})
 	if err != nil {
 		log.Errorf("get torrent info for error: %v", err)
 	}
 	return len(r) > 0
 }
-
 
 func (t *Torrent) Name() (string, error) {
 	tt, err := t.getTorrent()
@@ -164,7 +168,7 @@ func (t *Torrent) Progress() (int, error) {
 }
 
 func (t *Torrent) Stop() error {
-	return t.c.TorrentStopHashes(context.TODO(), []string{t.Hash})
+	return t.c.TorrentStopHashes(context.TODO(), []string{t.hash})
 }
 
 func (t *Torrent) SeedRatio() (float64, error) {
@@ -179,7 +183,7 @@ func (t *Torrent) SeedRatio() (float64, error) {
 }
 
 func (t *Torrent) Start() error {
-	return t.c.TorrentStartHashes(context.TODO(), []string{t.Hash})
+	return t.c.TorrentStartHashes(context.TODO(), []string{t.hash})
 }
 
 func (t *Torrent) Remove() error {
@@ -201,22 +205,6 @@ func (t *Torrent) Size() (int, error) {
 	return int(tt.TotalSize.Byte()), nil
 }
 
-func (t *Torrent) Save() string {
-
-	d, _ := json.Marshal(*t)
-	return string(d)
-}
-
-func ReloadTorrent(s string) (*Torrent, error) {
-	var torrent = Torrent{}
-	err := json.Unmarshal([]byte(s), &torrent)
-	if err != nil {
-		return nil, err
-	}
-
-	err = torrent.reloadClient()
-	if err != nil {
-		return nil, errors.Wrap(err, "reload client")
-	}
-	return &torrent, nil
+func (t *Torrent) GetHash() string {
+	return t.hash
 }

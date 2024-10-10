@@ -6,7 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"polaris/ent/blocklist"
+	"polaris/ent/blacklist"
 	"polaris/ent/downloadclients"
 	"polaris/ent/episode"
 	"polaris/ent/history"
@@ -34,7 +34,7 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeBlocklist          = "Blocklist"
+	TypeBlacklist          = "Blacklist"
 	TypeDownloadClients    = "DownloadClients"
 	TypeEpisode            = "Episode"
 	TypeHistory            = "History"
@@ -46,31 +46,32 @@ const (
 	TypeStorage            = "Storage"
 )
 
-// BlocklistMutation represents an operation that mutates the Blocklist nodes in the graph.
-type BlocklistMutation struct {
+// BlacklistMutation represents an operation that mutates the Blacklist nodes in the graph.
+type BlacklistMutation struct {
 	config
 	op            Op
 	typ           string
 	id            *int
-	_type         *blocklist.Type
-	value         *string
+	_type         *blacklist.Type
+	value         *schema.BlacklistValue
+	notes         *string
 	clearedFields map[string]struct{}
 	done          bool
-	oldValue      func(context.Context) (*Blocklist, error)
-	predicates    []predicate.Blocklist
+	oldValue      func(context.Context) (*Blacklist, error)
+	predicates    []predicate.Blacklist
 }
 
-var _ ent.Mutation = (*BlocklistMutation)(nil)
+var _ ent.Mutation = (*BlacklistMutation)(nil)
 
-// blocklistOption allows management of the mutation configuration using functional options.
-type blocklistOption func(*BlocklistMutation)
+// blacklistOption allows management of the mutation configuration using functional options.
+type blacklistOption func(*BlacklistMutation)
 
-// newBlocklistMutation creates new mutation for the Blocklist entity.
-func newBlocklistMutation(c config, op Op, opts ...blocklistOption) *BlocklistMutation {
-	m := &BlocklistMutation{
+// newBlacklistMutation creates new mutation for the Blacklist entity.
+func newBlacklistMutation(c config, op Op, opts ...blacklistOption) *BlacklistMutation {
+	m := &BlacklistMutation{
 		config:        c,
 		op:            op,
-		typ:           TypeBlocklist,
+		typ:           TypeBlacklist,
 		clearedFields: make(map[string]struct{}),
 	}
 	for _, opt := range opts {
@@ -79,20 +80,20 @@ func newBlocklistMutation(c config, op Op, opts ...blocklistOption) *BlocklistMu
 	return m
 }
 
-// withBlocklistID sets the ID field of the mutation.
-func withBlocklistID(id int) blocklistOption {
-	return func(m *BlocklistMutation) {
+// withBlacklistID sets the ID field of the mutation.
+func withBlacklistID(id int) blacklistOption {
+	return func(m *BlacklistMutation) {
 		var (
 			err   error
 			once  sync.Once
-			value *Blocklist
+			value *Blacklist
 		)
-		m.oldValue = func(ctx context.Context) (*Blocklist, error) {
+		m.oldValue = func(ctx context.Context) (*Blacklist, error) {
 			once.Do(func() {
 				if m.done {
 					err = errors.New("querying old values post mutation is not allowed")
 				} else {
-					value, err = m.Client().Blocklist.Get(ctx, id)
+					value, err = m.Client().Blacklist.Get(ctx, id)
 				}
 			})
 			return value, err
@@ -101,10 +102,10 @@ func withBlocklistID(id int) blocklistOption {
 	}
 }
 
-// withBlocklist sets the old Blocklist of the mutation.
-func withBlocklist(node *Blocklist) blocklistOption {
-	return func(m *BlocklistMutation) {
-		m.oldValue = func(context.Context) (*Blocklist, error) {
+// withBlacklist sets the old Blacklist of the mutation.
+func withBlacklist(node *Blacklist) blacklistOption {
+	return func(m *BlacklistMutation) {
+		m.oldValue = func(context.Context) (*Blacklist, error) {
 			return node, nil
 		}
 		m.id = &node.ID
@@ -113,7 +114,7 @@ func withBlocklist(node *Blocklist) blocklistOption {
 
 // Client returns a new `ent.Client` from the mutation. If the mutation was
 // executed in a transaction (ent.Tx), a transactional client is returned.
-func (m BlocklistMutation) Client() *Client {
+func (m BlacklistMutation) Client() *Client {
 	client := &Client{config: m.config}
 	client.init()
 	return client
@@ -121,7 +122,7 @@ func (m BlocklistMutation) Client() *Client {
 
 // Tx returns an `ent.Tx` for mutations that were executed in transactions;
 // it returns an error otherwise.
-func (m BlocklistMutation) Tx() (*Tx, error) {
+func (m BlacklistMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
 		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
@@ -132,7 +133,7 @@ func (m BlocklistMutation) Tx() (*Tx, error) {
 
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *BlocklistMutation) ID() (id int, exists bool) {
+func (m *BlacklistMutation) ID() (id int, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -143,7 +144,7 @@ func (m *BlocklistMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *BlocklistMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *BlacklistMutation) IDs(ctx context.Context) ([]int, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
@@ -152,19 +153,19 @@ func (m *BlocklistMutation) IDs(ctx context.Context) ([]int, error) {
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().Blocklist.Query().Where(m.predicates...).IDs(ctx)
+		return m.Client().Blacklist.Query().Where(m.predicates...).IDs(ctx)
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
 }
 
 // SetType sets the "type" field.
-func (m *BlocklistMutation) SetType(b blocklist.Type) {
+func (m *BlacklistMutation) SetType(b blacklist.Type) {
 	m._type = &b
 }
 
 // GetType returns the value of the "type" field in the mutation.
-func (m *BlocklistMutation) GetType() (r blocklist.Type, exists bool) {
+func (m *BlacklistMutation) GetType() (r blacklist.Type, exists bool) {
 	v := m._type
 	if v == nil {
 		return
@@ -172,10 +173,10 @@ func (m *BlocklistMutation) GetType() (r blocklist.Type, exists bool) {
 	return *v, true
 }
 
-// OldType returns the old "type" field's value of the Blocklist entity.
-// If the Blocklist object wasn't provided to the builder, the object is fetched from the database.
+// OldType returns the old "type" field's value of the Blacklist entity.
+// If the Blacklist object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BlocklistMutation) OldType(ctx context.Context) (v blocklist.Type, err error) {
+func (m *BlacklistMutation) OldType(ctx context.Context) (v blacklist.Type, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldType is only allowed on UpdateOne operations")
 	}
@@ -190,17 +191,17 @@ func (m *BlocklistMutation) OldType(ctx context.Context) (v blocklist.Type, err 
 }
 
 // ResetType resets all changes to the "type" field.
-func (m *BlocklistMutation) ResetType() {
+func (m *BlacklistMutation) ResetType() {
 	m._type = nil
 }
 
 // SetValue sets the "value" field.
-func (m *BlocklistMutation) SetValue(s string) {
-	m.value = &s
+func (m *BlacklistMutation) SetValue(sv schema.BlacklistValue) {
+	m.value = &sv
 }
 
 // Value returns the value of the "value" field in the mutation.
-func (m *BlocklistMutation) Value() (r string, exists bool) {
+func (m *BlacklistMutation) Value() (r schema.BlacklistValue, exists bool) {
 	v := m.value
 	if v == nil {
 		return
@@ -208,10 +209,10 @@ func (m *BlocklistMutation) Value() (r string, exists bool) {
 	return *v, true
 }
 
-// OldValue returns the old "value" field's value of the Blocklist entity.
-// If the Blocklist object wasn't provided to the builder, the object is fetched from the database.
+// OldValue returns the old "value" field's value of the Blacklist entity.
+// If the Blacklist object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BlocklistMutation) OldValue(ctx context.Context) (v string, err error) {
+func (m *BlacklistMutation) OldValue(ctx context.Context) (v schema.BlacklistValue, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldValue is only allowed on UpdateOne operations")
 	}
@@ -226,19 +227,68 @@ func (m *BlocklistMutation) OldValue(ctx context.Context) (v string, err error) 
 }
 
 // ResetValue resets all changes to the "value" field.
-func (m *BlocklistMutation) ResetValue() {
+func (m *BlacklistMutation) ResetValue() {
 	m.value = nil
 }
 
-// Where appends a list predicates to the BlocklistMutation builder.
-func (m *BlocklistMutation) Where(ps ...predicate.Blocklist) {
+// SetNotes sets the "notes" field.
+func (m *BlacklistMutation) SetNotes(s string) {
+	m.notes = &s
+}
+
+// Notes returns the value of the "notes" field in the mutation.
+func (m *BlacklistMutation) Notes() (r string, exists bool) {
+	v := m.notes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNotes returns the old "notes" field's value of the Blacklist entity.
+// If the Blacklist object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BlacklistMutation) OldNotes(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNotes is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNotes requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNotes: %w", err)
+	}
+	return oldValue.Notes, nil
+}
+
+// ClearNotes clears the value of the "notes" field.
+func (m *BlacklistMutation) ClearNotes() {
+	m.notes = nil
+	m.clearedFields[blacklist.FieldNotes] = struct{}{}
+}
+
+// NotesCleared returns if the "notes" field was cleared in this mutation.
+func (m *BlacklistMutation) NotesCleared() bool {
+	_, ok := m.clearedFields[blacklist.FieldNotes]
+	return ok
+}
+
+// ResetNotes resets all changes to the "notes" field.
+func (m *BlacklistMutation) ResetNotes() {
+	m.notes = nil
+	delete(m.clearedFields, blacklist.FieldNotes)
+}
+
+// Where appends a list predicates to the BlacklistMutation builder.
+func (m *BlacklistMutation) Where(ps ...predicate.Blacklist) {
 	m.predicates = append(m.predicates, ps...)
 }
 
-// WhereP appends storage-level predicates to the BlocklistMutation builder. Using this method,
+// WhereP appends storage-level predicates to the BlacklistMutation builder. Using this method,
 // users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *BlocklistMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.Blocklist, len(ps))
+func (m *BlacklistMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Blacklist, len(ps))
 	for i := range ps {
 		p[i] = ps[i]
 	}
@@ -246,30 +296,33 @@ func (m *BlocklistMutation) WhereP(ps ...func(*sql.Selector)) {
 }
 
 // Op returns the operation name.
-func (m *BlocklistMutation) Op() Op {
+func (m *BlacklistMutation) Op() Op {
 	return m.op
 }
 
 // SetOp allows setting the mutation operation.
-func (m *BlocklistMutation) SetOp(op Op) {
+func (m *BlacklistMutation) SetOp(op Op) {
 	m.op = op
 }
 
-// Type returns the node type of this mutation (Blocklist).
-func (m *BlocklistMutation) Type() string {
+// Type returns the node type of this mutation (Blacklist).
+func (m *BlacklistMutation) Type() string {
 	return m.typ
 }
 
 // Fields returns all fields that were changed during this mutation. Note that in
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
-func (m *BlocklistMutation) Fields() []string {
-	fields := make([]string, 0, 2)
+func (m *BlacklistMutation) Fields() []string {
+	fields := make([]string, 0, 3)
 	if m._type != nil {
-		fields = append(fields, blocklist.FieldType)
+		fields = append(fields, blacklist.FieldType)
 	}
 	if m.value != nil {
-		fields = append(fields, blocklist.FieldValue)
+		fields = append(fields, blacklist.FieldValue)
+	}
+	if m.notes != nil {
+		fields = append(fields, blacklist.FieldNotes)
 	}
 	return fields
 }
@@ -277,12 +330,14 @@ func (m *BlocklistMutation) Fields() []string {
 // Field returns the value of a field with the given name. The second boolean
 // return value indicates that this field was not set, or was not defined in the
 // schema.
-func (m *BlocklistMutation) Field(name string) (ent.Value, bool) {
+func (m *BlacklistMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case blocklist.FieldType:
+	case blacklist.FieldType:
 		return m.GetType()
-	case blocklist.FieldValue:
+	case blacklist.FieldValue:
 		return m.Value()
+	case blacklist.FieldNotes:
+		return m.Notes()
 	}
 	return nil, false
 }
@@ -290,140 +345,161 @@ func (m *BlocklistMutation) Field(name string) (ent.Value, bool) {
 // OldField returns the old value of the field from the database. An error is
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
-func (m *BlocklistMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+func (m *BlacklistMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case blocklist.FieldType:
+	case blacklist.FieldType:
 		return m.OldType(ctx)
-	case blocklist.FieldValue:
+	case blacklist.FieldValue:
 		return m.OldValue(ctx)
+	case blacklist.FieldNotes:
+		return m.OldNotes(ctx)
 	}
-	return nil, fmt.Errorf("unknown Blocklist field %s", name)
+	return nil, fmt.Errorf("unknown Blacklist field %s", name)
 }
 
 // SetField sets the value of a field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *BlocklistMutation) SetField(name string, value ent.Value) error {
+func (m *BlacklistMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case blocklist.FieldType:
-		v, ok := value.(blocklist.Type)
+	case blacklist.FieldType:
+		v, ok := value.(blacklist.Type)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetType(v)
 		return nil
-	case blocklist.FieldValue:
-		v, ok := value.(string)
+	case blacklist.FieldValue:
+		v, ok := value.(schema.BlacklistValue)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetValue(v)
 		return nil
+	case blacklist.FieldNotes:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNotes(v)
+		return nil
 	}
-	return fmt.Errorf("unknown Blocklist field %s", name)
+	return fmt.Errorf("unknown Blacklist field %s", name)
 }
 
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
-func (m *BlocklistMutation) AddedFields() []string {
+func (m *BlacklistMutation) AddedFields() []string {
 	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
-func (m *BlocklistMutation) AddedField(name string) (ent.Value, bool) {
+func (m *BlacklistMutation) AddedField(name string) (ent.Value, bool) {
 	return nil, false
 }
 
 // AddField adds the value to the field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *BlocklistMutation) AddField(name string, value ent.Value) error {
+func (m *BlacklistMutation) AddField(name string, value ent.Value) error {
 	switch name {
 	}
-	return fmt.Errorf("unknown Blocklist numeric field %s", name)
+	return fmt.Errorf("unknown Blacklist numeric field %s", name)
 }
 
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
-func (m *BlocklistMutation) ClearedFields() []string {
-	return nil
+func (m *BlacklistMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(blacklist.FieldNotes) {
+		fields = append(fields, blacklist.FieldNotes)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
 // cleared in this mutation.
-func (m *BlocklistMutation) FieldCleared(name string) bool {
+func (m *BlacklistMutation) FieldCleared(name string) bool {
 	_, ok := m.clearedFields[name]
 	return ok
 }
 
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
-func (m *BlocklistMutation) ClearField(name string) error {
-	return fmt.Errorf("unknown Blocklist nullable field %s", name)
+func (m *BlacklistMutation) ClearField(name string) error {
+	switch name {
+	case blacklist.FieldNotes:
+		m.ClearNotes()
+		return nil
+	}
+	return fmt.Errorf("unknown Blacklist nullable field %s", name)
 }
 
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
-func (m *BlocklistMutation) ResetField(name string) error {
+func (m *BlacklistMutation) ResetField(name string) error {
 	switch name {
-	case blocklist.FieldType:
+	case blacklist.FieldType:
 		m.ResetType()
 		return nil
-	case blocklist.FieldValue:
+	case blacklist.FieldValue:
 		m.ResetValue()
 		return nil
+	case blacklist.FieldNotes:
+		m.ResetNotes()
+		return nil
 	}
-	return fmt.Errorf("unknown Blocklist field %s", name)
+	return fmt.Errorf("unknown Blacklist field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
-func (m *BlocklistMutation) AddedEdges() []string {
+func (m *BlacklistMutation) AddedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
-func (m *BlocklistMutation) AddedIDs(name string) []ent.Value {
+func (m *BlacklistMutation) AddedIDs(name string) []ent.Value {
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
-func (m *BlocklistMutation) RemovedEdges() []string {
+func (m *BlacklistMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
-func (m *BlocklistMutation) RemovedIDs(name string) []ent.Value {
+func (m *BlacklistMutation) RemovedIDs(name string) []ent.Value {
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *BlocklistMutation) ClearedEdges() []string {
+func (m *BlacklistMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
-func (m *BlocklistMutation) EdgeCleared(name string) bool {
+func (m *BlacklistMutation) EdgeCleared(name string) bool {
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
-func (m *BlocklistMutation) ClearEdge(name string) error {
-	return fmt.Errorf("unknown Blocklist unique edge %s", name)
+func (m *BlacklistMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown Blacklist unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
-func (m *BlocklistMutation) ResetEdge(name string) error {
-	return fmt.Errorf("unknown Blocklist edge %s", name)
+func (m *BlacklistMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown Blacklist edge %s", name)
 }
 
 // DownloadClientsMutation represents an operation that mutates the DownloadClients nodes in the graph.
@@ -434,12 +510,13 @@ type DownloadClientsMutation struct {
 	id                         *int
 	enable                     *bool
 	name                       *string
-	implementation             *string
+	implementation             *downloadclients.Implementation
 	url                        *string
 	user                       *string
 	password                   *string
 	settings                   *string
-	priority                   *string
+	priority1                  *int
+	addpriority1               *int
 	remove_completed_downloads *bool
 	remove_failed_downloads    *bool
 	tags                       *string
@@ -620,12 +697,12 @@ func (m *DownloadClientsMutation) ResetName() {
 }
 
 // SetImplementation sets the "implementation" field.
-func (m *DownloadClientsMutation) SetImplementation(s string) {
-	m.implementation = &s
+func (m *DownloadClientsMutation) SetImplementation(d downloadclients.Implementation) {
+	m.implementation = &d
 }
 
 // Implementation returns the value of the "implementation" field in the mutation.
-func (m *DownloadClientsMutation) Implementation() (r string, exists bool) {
+func (m *DownloadClientsMutation) Implementation() (r downloadclients.Implementation, exists bool) {
 	v := m.implementation
 	if v == nil {
 		return
@@ -636,7 +713,7 @@ func (m *DownloadClientsMutation) Implementation() (r string, exists bool) {
 // OldImplementation returns the old "implementation" field's value of the DownloadClients entity.
 // If the DownloadClients object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DownloadClientsMutation) OldImplementation(ctx context.Context) (v string, err error) {
+func (m *DownloadClientsMutation) OldImplementation(ctx context.Context) (v downloadclients.Implementation, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldImplementation is only allowed on UpdateOne operations")
 	}
@@ -799,40 +876,60 @@ func (m *DownloadClientsMutation) ResetSettings() {
 	m.settings = nil
 }
 
-// SetPriority sets the "priority" field.
-func (m *DownloadClientsMutation) SetPriority(s string) {
-	m.priority = &s
+// SetPriority1 sets the "priority1" field.
+func (m *DownloadClientsMutation) SetPriority1(i int) {
+	m.priority1 = &i
+	m.addpriority1 = nil
 }
 
-// Priority returns the value of the "priority" field in the mutation.
-func (m *DownloadClientsMutation) Priority() (r string, exists bool) {
-	v := m.priority
+// Priority1 returns the value of the "priority1" field in the mutation.
+func (m *DownloadClientsMutation) Priority1() (r int, exists bool) {
+	v := m.priority1
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldPriority returns the old "priority" field's value of the DownloadClients entity.
+// OldPriority1 returns the old "priority1" field's value of the DownloadClients entity.
 // If the DownloadClients object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DownloadClientsMutation) OldPriority(ctx context.Context) (v string, err error) {
+func (m *DownloadClientsMutation) OldPriority1(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
+		return v, errors.New("OldPriority1 is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPriority requires an ID field in the mutation")
+		return v, errors.New("OldPriority1 requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
+		return v, fmt.Errorf("querying old value for OldPriority1: %w", err)
 	}
-	return oldValue.Priority, nil
+	return oldValue.Priority1, nil
 }
 
-// ResetPriority resets all changes to the "priority" field.
-func (m *DownloadClientsMutation) ResetPriority() {
-	m.priority = nil
+// AddPriority1 adds i to the "priority1" field.
+func (m *DownloadClientsMutation) AddPriority1(i int) {
+	if m.addpriority1 != nil {
+		*m.addpriority1 += i
+	} else {
+		m.addpriority1 = &i
+	}
+}
+
+// AddedPriority1 returns the value that was added to the "priority1" field in this mutation.
+func (m *DownloadClientsMutation) AddedPriority1() (r int, exists bool) {
+	v := m.addpriority1
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPriority1 resets all changes to the "priority1" field.
+func (m *DownloadClientsMutation) ResetPriority1() {
+	m.priority1 = nil
+	m.addpriority1 = nil
 }
 
 // SetRemoveCompletedDownloads sets the "remove_completed_downloads" field.
@@ -999,8 +1096,8 @@ func (m *DownloadClientsMutation) Fields() []string {
 	if m.settings != nil {
 		fields = append(fields, downloadclients.FieldSettings)
 	}
-	if m.priority != nil {
-		fields = append(fields, downloadclients.FieldPriority)
+	if m.priority1 != nil {
+		fields = append(fields, downloadclients.FieldPriority1)
 	}
 	if m.remove_completed_downloads != nil {
 		fields = append(fields, downloadclients.FieldRemoveCompletedDownloads)
@@ -1033,8 +1130,8 @@ func (m *DownloadClientsMutation) Field(name string) (ent.Value, bool) {
 		return m.Password()
 	case downloadclients.FieldSettings:
 		return m.Settings()
-	case downloadclients.FieldPriority:
-		return m.Priority()
+	case downloadclients.FieldPriority1:
+		return m.Priority1()
 	case downloadclients.FieldRemoveCompletedDownloads:
 		return m.RemoveCompletedDownloads()
 	case downloadclients.FieldRemoveFailedDownloads:
@@ -1064,8 +1161,8 @@ func (m *DownloadClientsMutation) OldField(ctx context.Context, name string) (en
 		return m.OldPassword(ctx)
 	case downloadclients.FieldSettings:
 		return m.OldSettings(ctx)
-	case downloadclients.FieldPriority:
-		return m.OldPriority(ctx)
+	case downloadclients.FieldPriority1:
+		return m.OldPriority1(ctx)
 	case downloadclients.FieldRemoveCompletedDownloads:
 		return m.OldRemoveCompletedDownloads(ctx)
 	case downloadclients.FieldRemoveFailedDownloads:
@@ -1096,7 +1193,7 @@ func (m *DownloadClientsMutation) SetField(name string, value ent.Value) error {
 		m.SetName(v)
 		return nil
 	case downloadclients.FieldImplementation:
-		v, ok := value.(string)
+		v, ok := value.(downloadclients.Implementation)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -1130,12 +1227,12 @@ func (m *DownloadClientsMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetSettings(v)
 		return nil
-	case downloadclients.FieldPriority:
-		v, ok := value.(string)
+	case downloadclients.FieldPriority1:
+		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetPriority(v)
+		m.SetPriority1(v)
 		return nil
 	case downloadclients.FieldRemoveCompletedDownloads:
 		v, ok := value.(bool)
@@ -1165,13 +1262,21 @@ func (m *DownloadClientsMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *DownloadClientsMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addpriority1 != nil {
+		fields = append(fields, downloadclients.FieldPriority1)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *DownloadClientsMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case downloadclients.FieldPriority1:
+		return m.AddedPriority1()
+	}
 	return nil, false
 }
 
@@ -1180,6 +1285,13 @@ func (m *DownloadClientsMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *DownloadClientsMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case downloadclients.FieldPriority1:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPriority1(v)
+		return nil
 	}
 	return fmt.Errorf("unknown DownloadClients numeric field %s", name)
 }
@@ -1228,8 +1340,8 @@ func (m *DownloadClientsMutation) ResetField(name string) error {
 	case downloadclients.FieldSettings:
 		m.ResetSettings()
 		return nil
-	case downloadclients.FieldPriority:
-		m.ResetPriority()
+	case downloadclients.FieldPriority1:
+		m.ResetPriority1()
 		return nil
 	case downloadclients.FieldRemoveCompletedDownloads:
 		m.ResetRemoveCompletedDownloads()
@@ -2233,6 +2345,7 @@ type HistoryMutation struct {
 	adddownload_client_id *int
 	indexer_id            *int
 	addindexer_id         *int
+	link                  *string
 	status                *history.Status
 	saved                 *string
 	clearedFields         map[string]struct{}
@@ -2769,6 +2882,55 @@ func (m *HistoryMutation) ResetIndexerID() {
 	delete(m.clearedFields, history.FieldIndexerID)
 }
 
+// SetLink sets the "link" field.
+func (m *HistoryMutation) SetLink(s string) {
+	m.link = &s
+}
+
+// Link returns the value of the "link" field in the mutation.
+func (m *HistoryMutation) Link() (r string, exists bool) {
+	v := m.link
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLink returns the old "link" field's value of the History entity.
+// If the History object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HistoryMutation) OldLink(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLink is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLink requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLink: %w", err)
+	}
+	return oldValue.Link, nil
+}
+
+// ClearLink clears the value of the "link" field.
+func (m *HistoryMutation) ClearLink() {
+	m.link = nil
+	m.clearedFields[history.FieldLink] = struct{}{}
+}
+
+// LinkCleared returns if the "link" field was cleared in this mutation.
+func (m *HistoryMutation) LinkCleared() bool {
+	_, ok := m.clearedFields[history.FieldLink]
+	return ok
+}
+
+// ResetLink resets all changes to the "link" field.
+func (m *HistoryMutation) ResetLink() {
+	m.link = nil
+	delete(m.clearedFields, history.FieldLink)
+}
+
 // SetStatus sets the "status" field.
 func (m *HistoryMutation) SetStatus(h history.Status) {
 	m.status = &h
@@ -2888,7 +3050,7 @@ func (m *HistoryMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *HistoryMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.media_id != nil {
 		fields = append(fields, history.FieldMediaID)
 	}
@@ -2912,6 +3074,9 @@ func (m *HistoryMutation) Fields() []string {
 	}
 	if m.indexer_id != nil {
 		fields = append(fields, history.FieldIndexerID)
+	}
+	if m.link != nil {
+		fields = append(fields, history.FieldLink)
 	}
 	if m.status != nil {
 		fields = append(fields, history.FieldStatus)
@@ -2943,6 +3108,8 @@ func (m *HistoryMutation) Field(name string) (ent.Value, bool) {
 		return m.DownloadClientID()
 	case history.FieldIndexerID:
 		return m.IndexerID()
+	case history.FieldLink:
+		return m.Link()
 	case history.FieldStatus:
 		return m.Status()
 	case history.FieldSaved:
@@ -2972,6 +3139,8 @@ func (m *HistoryMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldDownloadClientID(ctx)
 	case history.FieldIndexerID:
 		return m.OldIndexerID(ctx)
+	case history.FieldLink:
+		return m.OldLink(ctx)
 	case history.FieldStatus:
 		return m.OldStatus(ctx)
 	case history.FieldSaved:
@@ -3040,6 +3209,13 @@ func (m *HistoryMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIndexerID(v)
+		return nil
+	case history.FieldLink:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLink(v)
 		return nil
 	case history.FieldStatus:
 		v, ok := value.(history.Status)
@@ -3157,6 +3333,9 @@ func (m *HistoryMutation) ClearedFields() []string {
 	if m.FieldCleared(history.FieldIndexerID) {
 		fields = append(fields, history.FieldIndexerID)
 	}
+	if m.FieldCleared(history.FieldLink) {
+		fields = append(fields, history.FieldLink)
+	}
 	if m.FieldCleared(history.FieldSaved) {
 		fields = append(fields, history.FieldSaved)
 	}
@@ -3182,6 +3361,9 @@ func (m *HistoryMutation) ClearField(name string) error {
 		return nil
 	case history.FieldIndexerID:
 		m.ClearIndexerID()
+		return nil
+	case history.FieldLink:
+		m.ClearLink()
 		return nil
 	case history.FieldSaved:
 		m.ClearSaved()
@@ -3217,6 +3399,9 @@ func (m *HistoryMutation) ResetField(name string) error {
 		return nil
 	case history.FieldIndexerID:
 		m.ResetIndexerID()
+		return nil
+	case history.FieldLink:
+		m.ResetLink()
 		return nil
 	case history.FieldStatus:
 		m.ResetStatus()
